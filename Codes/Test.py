@@ -14,6 +14,7 @@ from PIL import ImageDraw
 
 out_path = '../Data/Graded_images/'
 
+#def non_maximum_suppression():
 
 def sliding_window(img, classifier, detector, window=(32, 32)):
 
@@ -50,6 +51,7 @@ def create_dir(*args):
             os.makedirs(directory)
 
 
+## For Checking that predicted and original boundries are overlaped or not.
 def isRectangleOverlap(R1, R2):
 
     if (R1[0] >= R2[2]) or (R1[2] <= R2[0]) or (R1[3] <= R2[1]) or (R1[1] >= R2[3]):
@@ -61,18 +63,22 @@ if __name__ == '__main__':
 
 
     # input_path = "../Data/Input_Images/"
-    input_path = "../Produced_dataset/test_one_digit/"
-    csv_path = "../Produced_dataset/test_processed.csv"
+    input_path = "../Produced_dataset/test_four_digit/"
+    csv_path = "../Produced_dataset/test.csv"
     test_df = pd.read_csv(csv_path)
 
-    # for image_name in os.listdir(input_path):
     Images = {}
     classifier = tf.keras.models.load_model("../Saved_models/Classifier/myCNN.h5")
     detector = tf.keras.models.load_model("../Saved_models/Detector/myDetectorCNN.h5")
     numbers = ["۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"]
 
+    all_numbs = 0
+    all_detect = 0
+    all_classify = 0
+
     for count, (index, rows) in enumerate(test_df.iterrows()):
 
+        all_numbs += 1
         if rows['file'] not in Images.keys():
 
               Images[rows['file']] = 1
@@ -102,30 +108,25 @@ if __name__ == '__main__':
               bounding_box = sliding_window(text_only.copy(), classifier, detector)
 
 
+
+        image_name = rows['file'].strip().split("/")[2]
         for label, (height, width) in bounding_box.items():
 
-              # a = image[int(rows['top']):int(rows['bottom']), int(rows['left']):int(rows['right'])]
+	      # Predicted boundries
               cv2.rectangle(img, (width, height), (width + 32, height + 32), (255, 0, 0), 1)
-              # cv2.rectangle(img, (int(rows['top']), int(rows['left'])), (int(rows['bottom']), int(rows['right'])), (255, 255, 255), 1)
-              # cv2.rectangle(img, (int(rows['bottom']), int(rows['right'])), (int(rows['bottom']) + 10, int(rows['right']) + 10), (255, 255, 255), 1)
+              # Original boundries
+              cv2.rectangle(img, (int(rows['left']), int(rows['top'])), (int(rows['width']), int(rows['height'])), (255, 255, 255), 1)
 
               Detect_rect = [width, height, width + 32, height + 32]
-              Orig_rect = [int(rows['top']) - 32, int(rows['left']) + 16, int(rows['top']), int(rows['left']) + 32 + 16]
+              Orig_rect = [int(rows['left']), int(rows['top']), int(rows['width']), int(rows['height'])]
 
-              image_name = rows['file'].strip().split("/")[2]
+              if isRectangleOverlap(Orig_rect, Detect_rect):
 
-              if rows['label'] == numbers[label]:
-                      # if isRectangleOverlap(Orig_rect, Detect_rect):
-                      #       print('Number is detected correctly...', image_name, ':', rows['label'])
-                      #       print('region_orig:', Orig_rect)
-                      #       print('region_detect', Detect_rect)
-
+                      all_detect += 1
                       reshaped_text = arabic_reshaper.reshape(numbers[label])  # correct its shape
                       bidi_text = get_display(reshaped_text)  # correct its direction
 
-                      # start drawing on image![](../Data/Graded_images/7117 (copy).jpg)
                       img = Image.fromarray(img)
-                      # img = Image.open(out_path + image_name)
                       draw = ImageDraw.Draw(img)
                       position_1 = width-15
                       position_2 = height+15
@@ -138,4 +139,15 @@ if __name__ == '__main__':
 
                       img = np.asarray(img)
 
+                      if rows['label'] == numbers[label]:
+                            print('Number is detected correctly...', image_name, ':', rows['label'])
+                            print('region_orig:', Orig_rect)
+                            print('region_detect', Detect_rect)
+                            all_classify += 1
+                            break
+
         cv2.imwrite(out_path + image_name, img)
+
+    print('Accuracy of true detection:', all_detect/all_numbs)
+    print('Accuracy of true classification:', all_classify/all_detect)
+

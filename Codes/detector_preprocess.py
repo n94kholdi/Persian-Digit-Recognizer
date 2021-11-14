@@ -6,28 +6,16 @@ import cv2
 import os
 
 TRAIN_PATH = "../Produced_dataset/"
-TEST_PATH  = "../Produced_dataset/"
 VALID_PATH = "../Produced_dataset/"
 IMAGE_SIZE = (32, 32)
 
 PROCESSED_TRAIN_PATH = "../Data/detector/train/"
 PROCESSED_VALID_PATH = "../Data/detector/valid/"
-PROCESSED_TEST_PATH  = "../Data/detector/test/"
 
 def create_dir(*args):
     for directory in args:
         if not os.path.exists(directory):
             os.makedirs(directory)
-
-def convert_to_dataframe(digit_struct,path):
-
-    return pd.DataFrame([{
-        'file': path + image['filename'],
-        'label': box['label'],
-        'width': box['width'],
-        'height': box['height'],
-        'top': box['top'],
-        'left': box['left']} for image in digit_struct for box in image['boxes']])
 
 
 def perform_aggregation(dataframe):
@@ -165,19 +153,16 @@ if __name__ == "__main__":
         print('read csvfile')
 
         train_df = pd.read_csv(TRAIN_PATH + "train.csv")
-        test_df = pd.read_csv(TEST_PATH + "test.csv")
         valid_df = pd.read_csv(TEST_PATH + "valid.csv")
 
         print('aggregation')
         train_df = perform_aggregation(train_df)
-        test_df  = perform_aggregation(test_df)
         valid_df = perform_aggregation(valid_df)
 
         #increase the box by 30%
 
         print('expad')
         train_df = expand_image(train_df)
-        test_df = expand_image(test_df)
         valid_df = expand_image(valid_df)
 
 
@@ -185,24 +170,19 @@ if __name__ == "__main__":
 
         print('size')
         train_df = get_image_size(train_df)
-        test_df = get_image_size(test_df)
         valid_df = get_image_size(valid_df)
 
         #correct the expanded bounding box
 
         print('boundaries')
         train_df = correct_boundaries(train_df)
-        test_df  = correct_boundaries(test_df)
         valid_df  = correct_boundaries(valid_df)
 
         #crop the images to 32 X 32
 
-        test_df.to_csv('./test_processed.csv', index=False)
-        # print('crop')
         crop_seqimage_and_save(train_df, PROCESSED_TRAIN_PATH, IMAGE_SIZE)
         crop_seqimage_and_save(valid_df, PROCESSED_VALID_PATH, IMAGE_SIZE)
-        crop_seqimage_and_save(test_df, PROCESSED_TEST_PATH, IMAGE_SIZE)
-
+        
 
 
 
